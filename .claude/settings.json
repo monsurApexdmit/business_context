@@ -7,7 +7,10 @@
       "Bash(python3 -m venv /tmp/docxenv)",
       "Bash(/tmp/docxenv/bin/pip install:*)",
       "Bash(/tmp/docxenv/bin/python3 -c \":*)",
-      "Bash(/tmp/docxenv/bin/python3:*)"
+      "Bash(/tmp/docxenv/bin/python3:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Bash(grep -E \"^\\\\|.*\\\\|$|^### Table|^## Table\")"
     ]
   }
 }

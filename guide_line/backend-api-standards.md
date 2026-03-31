@@ -411,20 +411,25 @@ FUNCTION getUser(id):
 
 ## 7. Validation & Error Messages
 
-All incoming data must be validated at the API boundary before it reaches any service or repository. Validation must be declarative (schema-based), not imperative (if-else chains).
+All incoming data must be validated at the API boundary before it reaches any service or repository. Validation is declared in a dedicated **Request file** for each operation — it is never written inline inside controllers or services.
 
 ### 7.1 Where Validation Runs
 
 ```
-Client Request  →  Route Middleware [VALIDATE HERE]  →  Controller  →  Service  →  Repository
+Client Request  →  Request File [VALIDATE HERE]  →  Controller  →  Service  →  Repository
 ```
 
-Validation middleware intercepts the request before it reaches the controller. The controller only ever receives data that has already been validated and typed.
+Each endpoint has a corresponding Request file that owns all validation rules for that operation. The controller only ever receives data that has already been validated and typed by the Request file.
 
-### 7.2 Validation Schema
+### 7.2 Request File Structure
+
+A Request file is responsible for:
+- Declaring all field-level validation rules for one specific request (e.g. `CreateUserRequest`, `UpdateProductRequest`)
+- Returning structured error messages when rules are violated
+- Stripping unknown fields before passing data to the controller
 
 ```
-VALIDATION SCHEMA CreateUser:
+REQUEST FILE: CreateUserRequest
 
   name:
     required:  true
@@ -456,7 +461,19 @@ VALIDATION SCHEMA CreateUser:
   STRIP_UNKNOWN_FIELDS: true   // always remove fields not in schema
 ```
 
-### 7.3 Validation Error Message Standards
+> One Request file per operation. `CreateUserRequest` and `UpdateUserRequest` are separate files even if they share most rules — update requests typically mark all fields optional.
+
+### 7.3 Naming Convention
+
+| Operation | Request File Name |
+|---|---|
+| Create resource | `CreateProductRequest` |
+| Full update | `UpdateProductRequest` |
+| Partial update (PATCH) | `PatchProductRequest` |
+| Query / filter | `ListProductsRequest` |
+| Action | `VerifyEmailRequest`, `ResetPasswordRequest` |
+
+### 7.4 Validation Error Message Standards
 
 | Rule Violated | ❌ Bad Message | ✓ Correct Message |
 |---|---|---|
@@ -473,7 +490,7 @@ VALIDATION SCHEMA CreateUser:
 | Unique conflict | `"Error"` | `"email address is already registered"` |
 | Cross-field rule | `"Invalid"` | `"endDate must be after startDate"` |
 
-### 7.4 Error Response Shape
+### 7.5 Error Response Shape
 
 ```json
 // HTTP 422 Unprocessable Entity
@@ -490,13 +507,14 @@ VALIDATION SCHEMA CreateUser:
 }
 ```
 
-### 7.5 Validation Rules
+### 7.6 Validation Rules
 
+- **All validation lives in the Request file** — never in the controller, service, or repository
 - Validate request body, query parameters, and path parameters with equal rigor
 - Strip unknown fields — never pass unrecognised input into the service layer
-- On update endpoints (PATCH), apply the same rules but mark all fields as optional
-- Business-rule violations (e.g. 'email already taken') return **409 Conflict**, not 422
-- Services must still enforce domain invariants even after middleware validation passes
+- On update endpoints (PATCH), create a separate Request file with all fields marked optional
+- Business-rule violations (e.g. 'email already taken') return **409 Conflict**, not 422 — these are checked in the service layer, not the Request file
+- Services must still enforce domain invariants even after the Request file validation passes
 
 > ⚑ Never return a single generic error. Collect **ALL** field errors and return them together in one response.
 
