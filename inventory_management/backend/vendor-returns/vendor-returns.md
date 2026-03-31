@@ -27,20 +27,21 @@ Manages product returns sent back to vendors/suppliers. When a return is created
 | deleted_at     | timestamp     | Soft delete (json: "-")                                           |
 
 ### Table: `vendor_return_items`
-| Column       | Type          | Notes                              |
-|--------------|---------------|------------------------------------|
-| id           | uint (PK, AI) |                                    |
-| return_id    | uint (FK)     | FK → vendor_returns.id; not null   |
-| product_id   | *uint (FK)    | FK → products.id; nullable         |
-| product_name | string        | not null; json: productName        |
-| variant_id   | *uint (FK)    | FK → product_variants.id; nullable |
-| variant_name | string        | json: variantName                  |
-| quantity     | int           | not null; default 1                |
-| unit_price   | float64       | not null; default 0; json: unitPrice|
-| total_price  | float64       | not null; default 0; json: totalPrice|
-| reason       | string        | not null; json: reason             |
-| created_at   | timestamp     |                                    |
-| updated_at   | timestamp     |                                    |
+| Column       | Type          | Notes                                                              |
+|--------------|---------------|--------------------------------------------------------------------|
+| id           | uint (PK, AI) |                                                                    |
+| return_id    | uint (FK)     | FK → vendor_returns.id; not null                                   |
+| product_id   | *uint (FK)    | FK → products.id; nullable                                         |
+| product_name | string        | not null; json: productName                                        |
+| variant_id   | *uint (FK)    | FK → product_variants.id; nullable                                 |
+| variant_name | string        | json: variantName                                                  |
+| quantity     | int           | not null; default 1                                                |
+| unit_price   | float64       | not null; default 0; sale price at time of return; json: unitPrice |
+| total_price  | float64       | not null; default 0; json: totalPrice                              |
+| unit_cost    | float64       | default 0; cost_price snapshotted from product/variant; json: unitCost |
+| reason       | string        | not null; json: reason                                             |
+| created_at   | timestamp     |                                                                    |
+| updated_at   | timestamp     |                                                                    |
 
 ---
 
@@ -124,6 +125,7 @@ Manages product returns sent back to vendors/suppliers. When a return is created
         "quantity": 10,
         "unitPrice": 15.00,
         "totalPrice": 150.00,
+        "unitCost": 10.00,
         "reason": "Defective batch"
       }
     ],
@@ -161,6 +163,7 @@ Manages product returns sent back to vendors/suppliers. When a return is created
       "quantity": 10,
       "unitPrice": 15.00,
       "totalPrice": 150.00,
+      "unitCost": 10.00,
       "reason": "Defective batch"
     }
   ]

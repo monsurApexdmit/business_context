@@ -19,6 +19,7 @@ Manages the product catalog. Products can be simple (with a single stock) or hav
 | location_id    | *uint (FK)     | FK → locations.id; nullable                             |
 | price          | float64        | default 0                                               |
 | sale_price     | float64        | default 0                                               |
+| cost_price     | float64        | default 0; purchase/acquisition cost from vendor        |
 | stock          | int            | default 0; synced from variants if variants exist       |
 | sku            | varchar(100)   | unique per company: idx_product_company_sku             |
 | barcode        | varchar(100)   | unique per company: idx_product_company_barcode         |
@@ -38,6 +39,7 @@ Manages the product catalog. Products can be simple (with a single stock) or hav
 | attributes | JSON          | {"Size": "Small", "Color": "Red"}            |
 | price      | float64       | default 0                                    |
 | sale_price | float64       | default 0                                    |
+| cost_price | float64       | default 0; overrides product cost_price if set |
 | stock      | int           | synced from sum of variant_inventory.quantity|
 | sku        | varchar(100)  | unique: idx_product_sku (product_id + sku)   |
 | barcode    | varchar(100)  | indexed                                      |
@@ -144,6 +146,7 @@ Manages the product catalog. Products can be simple (with a single stock) or hav
       "location_id": 1,
       "price": 29.99,
       "sale_price": 0,
+      "cost_price": 15.00,
       "stock": 100,
       "sku": "TSHIRT-001",
       "barcode": "123456789",
@@ -199,6 +202,7 @@ Manages the product catalog. Products can be simple (with a single stock) or hav
 | location_id  | uint    | no       |                                    |
 | price        | float   | no       |                                    |
 | sale_price   | float   | no       |                                    |
+| cost_price   | float   | no       | Purchase/acquisition cost          |
 | stock        | int     | no       |                                    |
 | sku          | string  | no       |                                    |
 | barcode      | string  | no       |                                    |
@@ -217,6 +221,7 @@ Manages the product catalog. Products can be simple (with a single stock) or hav
     "attributes": {"Size": "Small", "Color": "Red"},
     "price": 29.99,
     "sale_price": 0,
+    "cost_price": 15.00,
     "stock": 50,
     "sku": "TSHIRT-S-RED",
     "barcode": "",

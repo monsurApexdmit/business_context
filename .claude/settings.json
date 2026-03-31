@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/monsur/**)",
+      "Bash(python3 -c \"import docx; print\\(''ok''\\)\")",
+      "Bash(python3 -c \":*)",
+      "Bash(python3 -m venv /tmp/docxenv)",
+      "Bash(/tmp/docxenv/bin/pip install:*)",
+      "Bash(/tmp/docxenv/bin/python3 -c \":*)",
+      "Bash(/tmp/docxenv/bin/python3:*)"
+    ]
+  }
+}

@@ -42,24 +42,28 @@ Manages sales orders. An order (called "Sell" internally) captures the customer,
 | carrier               | varchar(100)   | json: carrier                                                         |
 | shipped_at            | *timestamp     | nullable; json: shippedAt                                             |
 | delivered_at          | *timestamp     | nullable; json: deliveredAt                                           |
+| total_cost            | float64        | default 0; SUM of order_items.total_cost; json: totalCost             |
+| gross_profit          | float64        | default 0; amount - total_cost; json: grossProfit                     |
 | notes                 | text           | json: notes                                                           |
 | created_at            | timestamp      | json: createdAt                                                       |
 | updated_at            | timestamp      | json: updatedAt                                                       |
 | deleted_at            | timestamp      | Soft delete (json: "-")                                               |
 
 ### Table: `order_items`
-| Column       | Type          | Notes                                |
-|--------------|---------------|--------------------------------------|
-| id           | uint (PK, AI) |                                      |
-| sell_id      | uint (FK)     | FK → sells.id                        |
-| product_id   | *uint (FK)    | FK → products.id; nullable           |
-| variant_id   | *uint (FK)    | FK → product_variants.id; nullable   |
-| inventory_id | *uint (FK)    | FK → variant_inventory.id; nullable  |
-| product_name | string        | json: productName                    |
-| variant_name | string        | json: variantName                    |
-| quantity     | int           | json: quantity                       |
-| unit_price   | float64       | json: unitPrice                      |
-| total_price  | float64       | json: totalPrice                     |
+| Column       | Type          | Notes                                                          |
+|--------------|---------------|----------------------------------------------------------------|
+| id           | uint (PK, AI) |                                                                |
+| sell_id      | uint (FK)     | FK → sells.id                                                  |
+| product_id   | *uint (FK)    | FK → products.id; nullable                                     |
+| variant_id   | *uint (FK)    | FK → product_variants.id; nullable                             |
+| inventory_id | *uint (FK)    | FK → variant_inventory.id; nullable                            |
+| product_name | string        | json: productName                                              |
+| variant_name | string        | json: variantName                                              |
+| quantity     | int           | json: quantity                                                 |
+| unit_price   | float64       | json: unitPrice                                                |
+| total_price  | float64       | json: totalPrice                                               |
+| unit_cost    | float64       | default 0; cost_price snapshotted from product/variant at sale time; json: unitCost |
+| total_cost   | float64       | default 0; unit_cost × quantity; json: totalCost               |
 
 ---
 
@@ -87,6 +91,9 @@ Manages sales orders. An order (called "Sell" internally) captures the customer,
 7. Check invoice number uniqueness within company
 8. Execute in DB transaction:
    - Create sell + items
+   - For each item: snapshot `cost_price` from variant (if variant exists) or product into `order_items.unit_cost`; compute `order_items.total_cost = unit_cost × quantity`
+   - Compute `sells.total_cost = SUM(order_items.total_cost)`
+   - Compute `sells.gross_profit = sells.amount - sells.total_cost`
    - Deduct stock for each item
    - Mark `stock_deducted = true`
 
@@ -183,6 +190,8 @@ Auto-generated: `INV-{unix_timestamp}` (e.g. `INV-1700000000`)
     "couponId": null,
     "couponCode": "",
     "discount": 0,
+    "totalCost": 30.00,
+    "grossProfit": 69.99,
     "status": "Pending",
     "stockDeducted": true,
     "paymentStatus": "pending",
@@ -202,7 +211,9 @@ Auto-generated: `INV-{unix_timestamp}` (e.g. `INV-1700000000`)
         "variantName": "Small / Red",
         "quantity": 2,
         "unitPrice": 29.99,
-        "totalPrice": 59.98
+        "totalPrice": 59.98,
+        "unitCost": 15.00,
+        "totalCost": 30.00
       }
     ],
     "shipments": [],
@@ -385,6 +396,9 @@ Auto-generated: `INV-{unix_timestamp}` (e.g. `INV-1700000000`)
   "data": {
     "totalSells": 100,
     "totalRevenue": 9999.99,
+    "totalCost": 6000.00,
+    "grossProfit": 3999.99,
+    "gpMarginPercent": 40.0,
     "pendingOrders": 10,
     "processingOrders": 5,
     "deliveredOrders": 85
