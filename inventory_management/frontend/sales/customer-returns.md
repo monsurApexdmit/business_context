@@ -1,0 +1,345 @@
+# Frontend Module: Customer Returns
+
+## Pages
+- `/dashboard/sales/returns` — Customer return requests list
+- `/dashboard/sales/returns/new` — Create return request
+- `/dashboard/sales/returns/:id` — Return detail with approve/reject actions
+
+## API Service
+`lib/customerReturnsApi.ts`
+
+---
+
+## GET /customer-returns
+**Purpose:** Fetch paginated list of customer return requests
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Query Params:**
+- `company_id` (auto-injected from `localStorage.company_id`)
+- `page` — page number (optional)
+- `limit` — items per page (optional)
+- `search` — search by return number, customer name (optional)
+- `status` — filter by status: `"pending"` | `"approved"` | `"rejected"` | `"completed"` (optional)
+
+**Expected Response 200:**
+```json
+{
+  "message": "string",
+  "data": [
+    {
+      "id": 1,
+      "returnNumber": "RET-20240101-001",
+      "customerId": 5,
+      "customerName": "John Doe",
+      "sellId": 10,
+      "orderNumber": "INV-20240101-001",
+      "status": "pending | approved | rejected | completed",
+      "refundMethod": "cash | card | store_credit",
+      "totalAmount": 59.98,
+      "notes": "string",
+      "processedBy": "string",
+      "processedAt": "2024-01-05T00:00:00Z",
+      "rejectionReason": null,
+      "items": [
+        {
+          "id": 1,
+          "customerReturnId": 1,
+          "productId": 10,
+          "productName": "Blue T-Shirt",
+          "variantId": 2,
+          "variantName": "Blue / Large",
+          "quantity": 2,
+          "price": 29.99,
+          "reason": "Defective item"
+        }
+      ],
+      "createdAt": "2024-01-04T00:00:00Z",
+      "updatedAt": "2024-01-05T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 30
+  },
+  "total": 30
+}
+```
+
+**Note:** Both `pagination.total` and top-level `total` may be present — use whichever is available.
+
+**Frontend Impact:**
+- Returns list with status filter tabs (Pending / Approved / Rejected / Completed)
+- Pending returns shown with action buttons (Approve / Reject)
+
+---
+
+## GET /customer-returns/stats
+**Purpose:** Fetch aggregate return statistics
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Query Params:**
+- `company_id` (auto-injected)
+
+**Expected Response 200:**
+```json
+{
+  "message": "string",
+  "data": {
+    "total": 30,
+    "pending": 8,
+    "approved": 12,
+    "rejected": 5,
+    "completed": 5,
+    "total_refund_amount": 1250.00,
+    "totalRefundAmount": 1250.00
+  }
+}
+```
+
+**Note:** Both `total_refund_amount` (snake_case) and `totalRefundAmount` (camelCase) may be present — frontend should handle both.
+
+**Frontend Impact:**
+- Stats cards at top of returns page
+- Total refund amount shown in financial summary
+
+---
+
+## GET /customer-returns/:id
+**Purpose:** Fetch a single return request with full item details
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Path Params:**
+- `id` — numeric return ID
+
+**Query Params:**
+- `company_id` (auto-injected)
+
+**Expected Response 200:**
+```json
+{
+  "message": "string",
+  "data": { "...full CustomerReturnResponse object..." }
+}
+```
+
+**Frontend Impact:**
+- Return detail page showing items, reason, status history
+- Approve/Reject action buttons visible when `status: "pending"`
+
+---
+
+## GET /customer-returns/customer/:customerId
+**Purpose:** Fetch all returns for a specific customer
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Path Params:**
+- `customerId` — numeric customer ID
+
+**Query Params:**
+- `company_id` (auto-injected)
+
+**Expected Response 200:**
+```json
+{
+  "message": "string",
+  "data": [ "...array of CustomerReturnResponse objects..." ],
+  "pagination": { "page": 1, "per_page": 20, "total": 5 },
+  "total": 5
+}
+```
+
+**Frontend Impact:**
+- Customer profile page "Returns" tab
+- Return history visible when viewing a customer record
+
+---
+
+## POST /customer-returns
+**Purpose:** Create a new return request
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Query Params:**
+- `company_id` (auto-injected)
+
+**Request Body:**
+```json
+{
+  "customerId": 5,
+  "sellId": 10,
+  "orderNumber": "INV-20240101-001",
+  "refundMethod": "cash",
+  "notes": "string",
+  "totalAmount": 59.98,
+  "items": [
+    {
+      "productId": 10,
+      "variantId": 2,
+      "quantity": 2,
+      "reason": "Defective item",
+      "price": 29.99
+    }
+  ]
+}
+```
+
+**Note:** `items` array is required with at least one item. Each item requires `productId`, `quantity`, and `reason`. `customerId` and `sellId` are optional but strongly recommended for proper linking.
+
+**Expected Response 201:**
+```json
+{
+  "message": "Return request created successfully",
+  "data": { "...full CustomerReturnResponse object with returnNumber..." }
+}
+```
+
+**Frontend Impact:**
+- New return created with `status: "pending"` automatically
+- Return number generated by backend
+- Notification may be sent to customer (backend-dependent)
+
+---
+
+## PUT /customer-returns/:id
+**Purpose:** Update a return request (before it's processed)
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Path Params:**
+- `id` — numeric return ID
+
+**Query Params:**
+- `company_id` (auto-injected)
+
+**Request Body:**
+```json
+{
+  "customerId": 5,
+  "sellId": 10,
+  "orderNumber": "string",
+  "refundMethod": "card",
+  "notes": "Updated notes",
+  "totalAmount": 29.99,
+  "items": [
+    {
+      "productId": 10,
+      "variantId": 2,
+      "quantity": 1,
+      "reason": "Wrong size",
+      "price": 29.99
+    }
+  ]
+}
+```
+
+**Note:** All fields optional (`Partial<CreateCustomerReturnData>`). Should only be called when `status: "pending"`.
+
+**Expected Response 200:**
+```json
+{
+  "message": "Return updated successfully",
+  "data": { "...full CustomerReturnResponse object..." }
+}
+```
+
+**Frontend Impact:**
+- Edit return form (only accessible for pending returns)
+
+---
+
+## PATCH /customer-returns/:id/approve
+**Purpose:** Approve a pending return request
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Path Params:**
+- `id` — numeric return ID
+
+**Query Params:**
+- `company_id` (auto-injected)
+
+**Request Body:**
+```json
+{
+  "notes": "Approved — refund will be processed within 3 business days"
+}
+```
+
+**Note:** `notes` is optional.
+
+**Expected Response 200:**
+```json
+{
+  "message": "Return approved successfully",
+  "data": { "...CustomerReturnResponse with status: 'approved'..." }
+}
+```
+
+**Frontend Impact:**
+- "Approve" button on return detail page
+- Status changes to `approved`
+- `processedBy` and `processedAt` populated by backend
+- Refund may be initiated automatically (backend-dependent)
+
+---
+
+## PATCH /customer-returns/:id/reject
+**Purpose:** Reject a pending return request with a reason
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Path Params:**
+- `id` — numeric return ID
+
+**Query Params:**
+- `company_id` (auto-injected)
+
+**Request Body:**
+```json
+{
+  "rejectionReason": "Item shows signs of damage not caused by manufacturing defect"
+}
+```
+
+**Note:** `rejectionReason` is required for rejection. The frontend function parameter is `reason: string` but the serialized key is `rejectionReason`.
+
+**Expected Response 200:**
+```json
+{
+  "message": "Return rejected",
+  "data": { "...CustomerReturnResponse with status: 'rejected' and rejectionReason populated..." }
+}
+```
+
+**Frontend Impact:**
+- "Reject" button opens modal prompting for rejection reason
+- `rejectionReason` displayed on return detail page after rejection
+
+---
+
+## DELETE /customer-returns/:id
+**Purpose:** Delete a return request
+**Auth:** Bearer JWT required
+**Content-Type:** `application/json`
+
+**Path Params:**
+- `id` — numeric return ID
+
+**Query Params:**
+- `company_id` (auto-injected)
+
+**Expected Response 200:**
+```json
+{
+  "message": "Return deleted successfully"
+}
+```
+
+**Frontend Impact:**
+- Return removed from list
+- Should only be allowed for pending/rejected returns (client-side guard recommended)
